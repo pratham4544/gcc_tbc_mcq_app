@@ -71,7 +71,7 @@ def add_marathi_font_styles():
 
 # Welcome Page
 def welcome_page():
-    st.image('assets\\front-banner.png')
+    st.image('assets/front-banner.png')
     st.title("Welcome to the MCQ Test")
     name = st.text_input("Enter your name:")
     language = st.selectbox("Choose the test language:", ("English", "Marathi"))
@@ -169,7 +169,7 @@ def result_page():
     else:
         st.error("❌ Better luck next time!")
         
-    st.image('assets\\end-banner.png')
+    st.image('assets/end-banner.png')
 
 # Main Function
 def main():
