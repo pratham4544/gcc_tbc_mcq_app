@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-
-# Load questions from CSV
+# Cache Data for Faster Loading
+@st.cache_data
 def load_questions(file):
     return pd.read_csv(file, encoding='utf-8')
 
@@ -68,10 +68,9 @@ def add_marathi_font_styles():
         unsafe_allow_html=True
     )
 
-
 # Welcome Page
 def welcome_page():
-    st.image('assets\\front-banner.png')
+    st.image('assets/front-banner.png', use_column_width=True)
     st.title("Welcome to the MCQ Test")
     name = st.text_input("Enter your name:")
     language = st.selectbox("Choose the test language:", ("English", "Marathi"))
@@ -83,12 +82,12 @@ def welcome_page():
 
             # Load the questions based on the language selected
             if language == "English":
-                st.session_state["questions"] = load_questions("english.csv")
+                st.session_state["questions"] = load_questions("english.csv").sample(25)
             elif language == "Marathi":
-                st.session_state["questions"] = load_questions("marathi.csv")
+                st.session_state["questions"] = load_questions("marathi.csv").sample(25)
 
             if not st.session_state["questions"].empty:
-                st.session_state["selected_questions"] = st.session_state["questions"].sample(25).reset_index(drop=True)
+                st.session_state["selected_questions"] = st.session_state["questions"].reset_index(drop=True)
                 st.session_state["current_question"] = 0
                 st.session_state["user_answers"] = [None] * len(st.session_state["selected_questions"])
                 st.session_state["page"] = "quiz"
@@ -96,6 +95,11 @@ def welcome_page():
                 st.error("Failed to load questions. Please check the CSV file.")
         else:
             st.warning("Please enter your name!")
+
+# Render Question
+def render_question(questions, current_question):
+    question_text = questions.iloc[current_question]["Question"]
+    return f'<div class="marathi-text">Q{current_question + 1}: {question_text}</div>'
 
 # Quiz Page
 def quiz_page():
@@ -106,11 +110,9 @@ def quiz_page():
     current_question = st.session_state["current_question"]
     questions = st.session_state["selected_questions"]
 
-    # Display the current question with Marathi font styling
-    st.markdown(
-        f'<div class="marathi-text">Q{current_question + 1}: {questions.iloc[current_question]["Question"]}</div>',
-        unsafe_allow_html=True
-    )
+    # Display the current question
+    question_html = render_question(questions, current_question)
+    st.markdown(question_html, unsafe_allow_html=True)
 
     options = {
         "A": questions.iloc[current_question]["Option A"],
@@ -133,16 +135,14 @@ def quiz_page():
     st.session_state["user_answers"][current_question] = selected_option.split(":")[0]
 
     # Navigation buttons
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Previous") and current_question > 0:
+    if current_question > 0:
+        if st.button("Previous"):
             st.session_state["current_question"] -= 1
-    with col2:
-        if st.button("Next") and current_question < len(questions) - 1:
-            st.session_state["current_question"] += 1
 
-    # Submit button on the last question
-    if current_question == len(questions) - 1:
+    if current_question < len(questions) - 1:
+        if st.button("Next"):
+            st.session_state["current_question"] += 1
+    elif current_question == len(questions) - 1:
         if st.button("Submit Exam"):
             st.session_state["page"] = "result"
 
@@ -153,7 +153,6 @@ def result_page():
     questions = st.session_state["selected_questions"]
 
     for i, row in questions.iterrows():
-        # correct_answer = row["Answer"].strip()
         correct_answer = row["Answer"]
         user_answer = st.session_state["user_answers"][i]
         if user_answer == correct_answer:
@@ -169,7 +168,7 @@ def result_page():
     else:
         st.error("❌ Better luck next time!")
         
-    st.image('assets\\end-banner.png')
+    st.image('assets/end-banner.png', use_column_width=True)
 
 # Main Function
 def main():
@@ -181,11 +180,10 @@ def main():
 
     if st.session_state["page"] == "welcome":
         welcome_page()
-    elif st.session_state["page"] == "quiz":
+    elif st.session_state["page"] == "quiz" and "selected_questions" in st.session_state:
         quiz_page()
-    elif st.session_state["page"] == "result":
+    elif st.session_state["page"] == "result" and "selected_questions" in st.session_state:
         result_page()
-
 
 if __name__ == "__main__":
     main()
